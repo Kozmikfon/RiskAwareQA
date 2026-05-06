@@ -1,0 +1,122 @@
+[
+  {
+    "FullName": "DataTransfer.FrmVeriEslestirme.GridKontrolEt",
+    "Complexity": 24,
+    "UsageCount": 14,
+    "CoverageRate": 27.0,
+    "Status": "Partial_Logic_Verified",
+    "RiskScore": 73.0
+  },
+  {
+    "FullName": "DataTransfer.FrmVeriEslestirme.DonusumEkraniAc",
+    "Complexity": 12,
+    "UsageCount": 6,
+    "CoverageRate": 0.0,
+    "Status": "UI_Manual_Only",
+    "RiskScore": 21.43
+  },
+  {
+    "FullName": "DataTransfer.Repository.SqlTransferRepository.Dispose",
+    "Complexity": 4,
+    "UsageCount": 19,
+    "CoverageRate": 15.6,
+    "Status": "Resource_Clean_Tested",
+    "RiskScore": 19.09
+  },
+  {
+    "FullName": "DataTransfer.Service.EslestirmeService.KontrolEt",
+    "Complexity": 21,
+    "UsageCount": 16,
+    "CoverageRate": 82.6,
+    "Status": "Safe_Verified",
+    "RiskScore": 17.4
+  },
+  {
+    "FullName": "DataTransfer.DonusumEkrani.Dispose",
+    "Complexity": 2,
+    "UsageCount": 19,
+    "CoverageRate": 0.0,
+    "Status": "UI_Clean_Up",
+    "RiskScore": 11.31
+  },
+  {
+    "FullName": "DataTransfer.Repository.SqlTransferRepository.ZorunluKolonlariCek",
+    "Complexity": 2,
+    "UsageCount": 2,
+    "CoverageRate": 15.6,
+    "Status": "Logic_Tested",
+    "RiskScore": 1.0
+  },
+  {
+    "FullName": "DataTransfer.Repository.SqlTransferRepository.KolonAdlariniGetirAsync",
+    "Complexity": 2,
+    "UsageCount": 2,
+    "CoverageRate": 100.0,
+    "Status": "Fully_Verified",
+    "RiskScore": 0.0
+  },
+  {
+    "FullName": "DataTransfer.Repository.SqlTransferRepository.SatirSayisiGetirAsync",
+    "Complexity": 4,
+    "UsageCount": 1,
+    "CoverageRate": 100.0,
+    "Status": "Fully_Verified",
+    "RiskScore": 0.0
+  },
+  {
+    "FullName": "DataTransfer.Repository.SqlTransferRepository.DataTableCalistir",
+    "Complexity": 2,
+    "UsageCount": 2,
+    "CoverageRate": 100.0,
+    "Status": "Exception_Handling_Verified",
+    "RiskScore": 0.0
+  },
+  {
+    "FullName": "DataTransfer.Repository.SqlTransferRepository.CommitTransaction",
+    "Complexity": 2,
+    "UsageCount": 2,
+    "CoverageRate": 100.0,
+    "Status": "Data_Integrity_Verified",
+    "RiskScore": 0.0
+  },
+  {
+    "FullName": "DataTransfer.KaynakDonusumEkrani.GrdKaynakDonusum_CellFormatting",
+    "Complexity": 8,
+    "UsageCount": 0,
+    "CoverageRate": 0.0,
+    "Status": "UI_Styling",
+    "RiskScore": 0.0
+  },
+  {
+    "FullName": "DataTransfer.Program.Main",
+    "Complexity": 1,
+    "UsageCount": 0,
+    "CoverageRate": 0.0,
+    "Status": "System_Entry",
+    "RiskScore": 0.0
+  },
+  {
+    "FullName": "DataTransfer.FrmVeriOnizleme.FrmVeriOnizleme_Load",
+    "Complexity": 1,
+    "UsageCount": 0,
+    "CoverageRate": 0.0,
+    "Status": "UI_Event",
+    "RiskScore": 0.0
+  },
+  {
+    "FullName": "DataTransfer.FrmVeriOnizleme.BtnOnayla_Click",
+    "Complexity": 1,
+    "UsageCount": 0,
+    "CoverageRate": 0.0,
+    "Status": "UI_Action",
+    "RiskScore": 0.0
+  },
+  {
+    "FullName": "DataTransfer.FrmVeriOnizleme.GrdOnizleme_CellContentClick",
+    "Complexity": 1,
+    "UsageCount": 0,
+    "CoverageRate": 0.0,
+    "Status": "UI_Interaction",
+    "RiskScore": 0.0
+  }
+]
