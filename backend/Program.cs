@@ -1,12 +1,12 @@
+using Microsoft.AspNetCore.Builder;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Diagnostics;
-using System.Xml.Linq;
 using System.Globalization;
+using System.Xml.Linq;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// CORS politikası: Frontend bağlantısı için gerekli
 builder.Services.AddCors(options => options.AddDefaultPolicy(p =>
     p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 
@@ -38,12 +38,17 @@ app.MapPost("/api/analyze", async (AnalyzeRequest req) =>
     }
 
     // 2. ADIM: Test Koşturma
-    await Task.Run(() => {
+    string testDir = !string.IsNullOrWhiteSpace(req.TestProjectPath) && Directory.Exists(req.TestProjectPath)
+        ? req.TestProjectPath
+        : req.ProjectPath;
+
+    await Task.Run(() =>
+    {
         var startInfo = new ProcessStartInfo
         {
             FileName = "dotnet",
             Arguments = "test --collect:\"XPlat Code Coverage\" --nologo",
-            WorkingDirectory = req.ProjectPath,
+            WorkingDirectory = testDir,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -54,9 +59,7 @@ app.MapPost("/api/analyze", async (AnalyzeRequest req) =>
     });
 
     // 3. ADIM: XML Parse ve Eşleştirme
-    // 3. ADIM: XML Parse ve Eşleştirme
-    // 3. ADIM: XML Parse ve Eşleştirme
-    var allTestResults = Directory.GetDirectories(req.ProjectPath, "TestResults", SearchOption.AllDirectories);
+    var allTestResults = Directory.GetDirectories(testDir, "TestResults", SearchOption.AllDirectories);
     string? coverageFile = null;
 
     if (allTestResults.Any())
@@ -73,55 +76,67 @@ app.MapPost("/api/analyze", async (AnalyzeRequest req) =>
         using var fs = new FileStream(coverageFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         var doc = XDocument.Load(fs);
 
-        // XML'deki tüm metotları düz bir listeye alalım
-        var xmlMethods = doc.Descendants("method")
+        // class bazında line-rate topla (async state machine class'larını ana class'a ekle)
+        var classRates = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var cls in doc.Descendants("class"))
+        {
+            string clsName = cls.Attribute("name")?.Value ?? "";
+            string rateStr = cls.Attribute("line-rate")?.Value ?? "0";
+            if (!double.TryParse(rateStr, NumberStyles.Any, CultureInfo.InvariantCulture, out double rate)) continue;
+
+            // async state machine: "MyClass/<MyMethod>d__2" → ana class "MyClass"
+            // normal class: "MyClass"
+            string baseName = clsName.Contains('/') ? clsName.Split('/')[0] : clsName;
+            baseName = baseName.ToLower();
+
+            if (!classRates.ContainsKey(baseName))
+                classRates[baseName] = rate;
+            else
+                classRates[baseName] = Math.Max(classRates[baseName], rate);
+        }
+
+        // method bazında da topla (varsa daha hassas)
+        var methodRates = doc.Descendants("method")
             .Select(m => new {
-                // Namespace + ClassName (Örn: MultiShop.Order.Application.Features.Handlers.MyHandler)
-                ClassName = m.Parent?.Parent?.Attribute("name")?.Value ?? "",
-                // Metot Adı (Signature dahil: Handle(Request req, ...))
-                Signature = m.Attribute("name")?.Value ?? "",
+                ClassName = (m.Parent?.Parent?.Attribute("name")?.Value ?? "").ToLower(),
+                MethodName = (m.Attribute("name")?.Value ?? "").ToLower(),
                 Rate = m.Attribute("line-rate")?.Value ?? "0"
             }).ToList();
 
-
         foreach (var m in allMetrics)
         {
-            string lowerMethodName = m.MethodName.ToLower();
-            string lowerClassName = m.FullName.Split('.').Reverse().Skip(1).FirstOrDefault()?.ToLower() ?? "";
+            string lowerMethod = m.MethodName.ToLower();
+            string lowerClass = m.FullName.Split('.').Reverse().Skip(1).FirstOrDefault()?.ToLower() ?? "";
+            string lowerFull = m.FullName.ToLower();
 
-            var match = xmlMethods.FirstOrDefault(x =>
+            // Önce method bazında ara
+            var methodMatch = methodRates.FirstOrDefault(x =>
+                x.ClassName.Contains(lowerClass) &&
+                (x.MethodName == lowerMethod || x.ClassName.Contains("<" + lowerMethod + ">")));
+
+            if (methodMatch != null && double.TryParse(methodMatch.Rate, NumberStyles.Any, CultureInfo.InvariantCulture, out double mRate))
             {
-                string xmlClass = x.ClassName.ToLower();
-                string xmlSig = x.Signature.ToLower();
+                m.CoverageRate = Math.Round(mRate * 100, 2);
+                continue;
+            }
 
-                // 1. KURAL: Sınıf isimleri uyuşmalı
-                bool isSameClass = xmlClass.Contains(lowerClassName);
-                // 2. KURAL: Async metotları yakala (<handle>d__2 gibi)
-                bool isAsyncMatch = xmlClass.Contains("<" + lowerMethodName + ">");
-                // 3. KURAL: Normal metot veya constructor
-                bool isDirectMatch = xmlSig.Contains(lowerMethodName + "(") || xmlSig == ".ctor";
-
-                return isSameClass && (isAsyncMatch || isDirectMatch);
-            });
-
-            if (match != null && double.TryParse(match.Rate, NumberStyles.Any, CultureInfo.InvariantCulture, out double rate))
+            // Sonra class bazında ara
+            var classKey = classRates.Keys.FirstOrDefault(k => k.Contains(lowerClass) || lowerFull.Contains(k));
+            if (classKey != null)
             {
-                m.CoverageRate = Math.Round(rate * 100, 2);
+                m.CoverageRate = Math.Round(classRates[classKey] * 100, 2);
             }
         }
     }
 
+    // 4. ADIM: Risk Skoru ve Status
     foreach (var m in allMetrics)
     {
         m.Status = DetermineStatus(m);
 
-        // Tehlike Faktörü: Karmaşıklık (max 10) ve Kullanım (max 30)
         double baseDanger = (Math.Min(m.Complexity, 10) * 7.0) + (Math.Min(m.UsageCount, 30) * 1.0);
-
-        // Koruma Faktörü: %100 Test edildiyse risk çarpanı 0 olur.
         double safetyMultiplier = (100.0 - m.CoverageRate) / 100.0;
-
-        // Final Risk (0-100 arası)
         double finalRisk = baseDanger * safetyMultiplier;
         m.RiskScore = Math.Round(Math.Clamp(finalRisk, 0, 100), 2);
     }
@@ -154,7 +169,7 @@ static string DetermineStatus(MethodMetric m)
     return "Untested";
 }
 
-public record AnalyzeRequest(string ProjectPath);
+public record AnalyzeRequest(string ProjectPath, string? TestProjectPath);
 
 public class MethodMetric
 {

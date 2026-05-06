@@ -21,8 +21,6 @@ type Method = {
 
 type MethodWithCategory = Method & { category: string };
 
-const API_URL = "http://localhost:5003";
-
 function getCategory(risk: number | undefined) {
   const r = risk ?? 0;
   if (r >= 75) return "Critical";
@@ -56,7 +54,7 @@ function App() {
     setData([]);
 
     try {
-      const res = await fetch(`${API_URL}/api/analyze`, {
+      const res = await fetch(`/api/analyze`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ projectPath: projectPath.trim() }),

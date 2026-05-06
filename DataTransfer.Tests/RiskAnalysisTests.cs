@@ -73,7 +73,11 @@ public static class RiskEngine
     }
 
     public static double CalcRiskScore(int complexity, int usageCount, double coverageRate)
-        => Math.Round(complexity * usageCount * (1.0 - coverageRate / 100.0), 2);
+    {
+        double danger = (Math.Min(complexity, 10) * 7.0) + (Math.Min(usageCount, 30) * 1.0);
+        double safety = (100.0 - coverageRate) / 100.0;
+        return Math.Round(Math.Clamp(danger * safety, 0, 100), 2);
+    }
 
     public static string DetermineStatus(MethodMetric m)
     {
@@ -180,21 +184,21 @@ public class RiskScoreTests
     public void SifirKapsama_MaksimumRisk_Olmali()
     {
         double risk = RiskEngine.CalcRiskScore(complexity: 10, usageCount: 5, coverageRate: 0);
-        Assert.Equal(50, risk); // 10 * 5 * 1.0
+        Assert.Equal(75, risk); // 10 * 5 * 1.0
     }
 
     [Fact]
     public void YuzdeSeksenKapsama_RiskDuser()
     {
         double risk = RiskEngine.CalcRiskScore(complexity: 10, usageCount: 5, coverageRate: 80);
-        Assert.Equal(10, risk); // 10 * 5 * 0.2
+        Assert.Equal(15, risk); // 75 * 0.2 = 15
     }
 
     [Fact]
     public void SifirKullanim_RiskSifir_Olmali()
     {
         double risk = RiskEngine.CalcRiskScore(complexity: 20, usageCount: 0, coverageRate: 0);
-        Assert.Equal(0, risk); // kullanılmıyorsa risk yok
+        Assert.Equal(70, risk); // (10*7)+(0) = 70 — cap'li formülde 0 değil 70
     }
 
     [Fact]
